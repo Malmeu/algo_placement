@@ -27,8 +27,8 @@
     }
   ],
   "env": {
-    "VITE_SUPABASE_URL": "@supabase_url",
-    "VITE_SUPABASE_ANON_KEY": "@supabase_anon_key",
-    "FRONTEND_URL": "@frontend_url"
+    "VITE_SUPABASE_URL": "https://ewudpdkppclxwuuujtir.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV3dWRwZGtwcGNseHd1dXVqdGlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3MjY4MDksImV4cCI6MjA3OTMwMjgwOX0.d0ygmi2Vrhj5B7Mx-R56K_7vuop3baLZ7PCXK2qOl20",
+    "FRONTEND_URL": "https://algo-placement.vercel.app"
   }
 }

@@ -44,7 +44,7 @@ export function generatePlanningWithGeneticAlgorithm(
   for (let gen = 0; gen < generations; gen++) {
     // Évaluer la fitness de chaque chromosome
     population.forEach(chromosome => {
-      chromosome.fitness = calculateFitness(chromosome, agents);
+      chromosome.fitness = calculateFitness(chromosome);
     });
 
     // Trier par fitness (meilleur en premier)

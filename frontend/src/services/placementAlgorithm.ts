@@ -1,4 +1,4 @@
-import { Agent, Assignment, Planning, PlacementResult, Pole, DayOfWeek } from '@/types';
+import { Agent, Assignment, Planning, Pole, DayOfWeek } from '@/types';
 import { isAvailableForTimeSlot } from '@/utils/availabilityParser';
 
 const POLES: Pole[] = ['Secure Academy', 'Mutuelle', 'Stafy', 'Timeone'];
@@ -9,6 +9,7 @@ const DAYS: DayOfWeek[] = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI'];
  */
 export function generatePlanning(agents: Agent[]): { success: boolean; planning: Planning | null; warnings: string[] } {
   const warnings: string[] = [];
+  const assignments: Assignment[] = [];
   const assignedAgentIds = new Set<string>();
   
   // Compteur de rotations par agent et par pôle
@@ -115,7 +116,7 @@ export function generatePlanning(agents: Agent[]): { success: boolean; planning:
     'Timeone': 0,
   };
 
-  assignments.forEach(assignment => {
+  assignments.forEach((assignment: Assignment) => {
     polesCoverage[assignment.pole]++;
   });
 
@@ -131,12 +132,6 @@ export function generatePlanning(agents: Agent[]): { success: boolean; planning:
     success: true,
     planning,
     warnings,
-    stats: {
-      totalAgents: agents.length,
-      assignedAgents: assignedAgentIds.size,
-      unassignedAgents: agents.length - assignedAgentIds.size,
-      polesCoverage,
-    },
   };
 }
 

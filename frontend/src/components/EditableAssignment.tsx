@@ -19,7 +19,6 @@ export default function EditableAssignment({
   timeSlot,
   agents,
   onUpdate,
-  onRemove,
   poleColor,
 }: EditableAssignmentProps) {
   const [isEditing, setIsEditing] = useState(false);

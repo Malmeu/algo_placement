@@ -1,0 +1,13 @@
+node_modules
+.git
+dist
+.env
+*.log
+.DS_Store
+coverage
+.nyc_output
+.cache
+.vscode
+.idea
+*.tgz
+*.tar.gz

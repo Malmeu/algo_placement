@@ -28,21 +28,7 @@ function App() {
   const [useGeneticAlgorithm, setUseGeneticAlgorithm] = useState(false);
   const notifications = useNotifications();
 
-  // Si pas connecté, afficher la page de login
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Chargement...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <LoginPage />;
-  }
+  // ⚠️ TOUS LES HOOKS DOIVENT ÊTRE AVANT LES RETURN CONDITIONNELS
 
   // Connexion WebSocket au démarrage
   useEffect(() => {
@@ -118,6 +104,23 @@ function App() {
       });
     }
   }, [planning]);
+
+  // Afficher le loader pendant le chargement de l'authentification
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Afficher la page de login si pas connecté
+  if (!user) {
+    return <LoginPage />;
+  }
 
   const handleCSVUploaded = (uploadedAgents: Agent[]) => {
     setAgents(uploadedAgents);

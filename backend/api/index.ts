@@ -1,4 +1,4 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import cors from 'cors';
 import express from 'express';
 import { Server } from 'socket.io';

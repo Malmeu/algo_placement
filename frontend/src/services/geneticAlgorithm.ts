@@ -1,5 +1,5 @@
-import { Agent, Assignment, Planning, PlacementResult, Pole, DayOfWeek } from '@/types';
-import { isAvailableForTimeSlot } from '@/utils/availabilityParser';
+import { Agent, Assignment, Planning, PlacementResult, Pole, DayOfWeek, Leave } from '@/types';
+import { isAgentAvailable } from '@/utils/availabilityParser';
 
 const POLES: Pole[] = ['Secure Academy', 'Mutuelle', 'Stafy', 'Timeone'];
 const DAYS: DayOfWeek[] = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI'];
@@ -20,6 +20,7 @@ interface Chromosome {
  */
 export function generatePlanningWithGeneticAlgorithm(
   agents: Agent[],
+  leaves: Leave[] = [],
   options: {
     populationSize?: number;
     generations?: number;
@@ -68,7 +69,7 @@ export function generatePlanningWithGeneticAlgorithm(
 
       // Mutation
       if (Math.random() < mutationRate) {
-        mutate(child, agents);
+        mutate(child, agents, leaves);
       }
 
       newPopulation.push(child);
@@ -144,7 +145,7 @@ function initializePopulation(agents: Agent[], size: number): Chromosome[] {
         TIME_SLOTS.forEach(timeSlot => {
           // Trouver les agents disponibles
           const availableAgents = agents.filter(agent =>
-            isAvailableForTimeSlot(agent.disponibilites[day], timeSlot)
+            isAgentAvailable(agent.id, day, timeSlot, agent.disponibilites[day], leaves)
           );
 
           if (availableAgents.length > 0) {
@@ -259,7 +260,7 @@ function crossover(parent1: Chromosome, parent2: Chromosome): Chromosome {
 /**
  * Mutation aléatoire
  */
-function mutate(chromosome: Chromosome, agents: Agent[]): void {
+function mutate(chromosome: Chromosome, agents: Agent[], leaves: Leave[]): void {
   if (chromosome.assignments.length === 0) return;
 
   // Choisir une affectation aléatoire à muter
@@ -268,7 +269,7 @@ function mutate(chromosome: Chromosome, agents: Agent[]): void {
 
   // Trouver un nouvel agent disponible
   const availableAgents = agents.filter(agent =>
-    isAvailableForTimeSlot(agent.disponibilites[assignment.jour], assignment.timeSlot) &&
+    isAgentAvailable(agent.id, assignment.jour, assignment.timeSlot, agent.disponibilites[assignment.jour], leaves) &&
     agent.id !== assignment.agentId
   );
 

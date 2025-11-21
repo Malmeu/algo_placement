@@ -11,7 +11,7 @@ import AgentView from './components/AgentView';
 import LeaveManagement from './components/LeaveManagement';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import NotificationBanner, { useNotifications } from './components/NotificationBanner';
-import { Agent, Planning } from './types';
+import { Agent, Planning, Leave } from './types';
 import { generatePlanning } from './services/placementAlgorithm';
 import { generatePlanningWithGeneticAlgorithm } from './services/geneticAlgorithm';
 import { saveAgents, loadAgents, savePlanning, deleteAgent as deleteAgentFromDb } from './services/supabaseService';
@@ -21,6 +21,7 @@ function App() {
   const { user, loading: authLoading, signOut, isAdmin } = useAuth();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [planning, setPlanning] = useState<Planning | null>(null);
+  const [leaves, setLeaves] = useState<Leave[]>([]);
   const [activeTab, setActiveTab] = useState<'upload' | 'agents' | 'planning' | 'history' | 'agentView' | 'leaves' | 'stats'>('upload');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showAgentForm, setShowAgentForm] = useState(false);
@@ -61,6 +62,11 @@ function App() {
     }
   }, [user]);
 
+  // Sauvegarder les congés dans localStorage
+  useEffect(() => {
+    localStorage.setItem('leaves', JSON.stringify(leaves));
+  }, [leaves]);
+
   // Charger les agents depuis Supabase au démarrage
   useEffect(() => {
     const fetchAgents = async () => {
@@ -79,6 +85,12 @@ function App() {
       }
     };
     fetchAgents();
+
+    // Charger les congés depuis localStorage
+    const savedLeaves = localStorage.getItem('leaves');
+    if (savedLeaves) {
+      setLeaves(JSON.parse(savedLeaves));
+    }
   }, []);
 
   // Sauvegarder les agents dans Supabase et localStorage
@@ -217,7 +229,7 @@ function App() {
       
       // Utiliser l'algorithme sélectionné
       const result = useGeneticAlgorithm 
-        ? generatePlanningWithGeneticAlgorithm(agents)
+        ? generatePlanningWithGeneticAlgorithm(agents, leaves)
         : await (async () => {
             await new Promise(resolve => setTimeout(resolve, 500));
             return generatePlanning(agents);
@@ -425,7 +437,7 @@ function App() {
           )}
 
           {activeTab === 'leaves' && (
-            <LeaveManagement agents={agents} />
+            <LeaveManagement agents={agents} leaves={leaves} setLeaves={setLeaves} />
           )}
           
           {activeTab === 'stats' && planning && (

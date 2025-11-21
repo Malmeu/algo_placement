@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 
 interface LeaveManagementProps {
   agents: Agent[];
+  leaves: Leave[];
+  setLeaves: (leaves: Leave[]) => void;
 }
 
 const LEAVE_TYPES = [
@@ -14,8 +16,7 @@ const LEAVE_TYPES = [
   { value: 'AUTRE', label: 'Autre', color: 'bg-gray-100 text-gray-800' },
 ];
 
-export default function LeaveManagement({ agents }: LeaveManagementProps) {
-  const [leaves, setLeaves] = useState<Leave[]>([]);
+export default function LeaveManagement({ agents, leaves, setLeaves }: LeaveManagementProps) {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     agent_id: '',
@@ -25,19 +26,7 @@ export default function LeaveManagement({ agents }: LeaveManagementProps) {
     motif: '',
   });
 
-  // Charger les congés depuis localStorage
-  useEffect(() => {
-    const savedLeaves = localStorage.getItem('leaves');
-    if (savedLeaves) {
-      setLeaves(JSON.parse(savedLeaves));
-    }
-  }, []);
-
-  // Sauvegarder les congés
-  useEffect(() => {
-    localStorage.setItem('leaves', JSON.stringify(leaves));
-  }, [leaves]);
-
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     

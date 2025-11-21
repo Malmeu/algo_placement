@@ -1,4 +1,4 @@
-import { Availability } from '@/types';
+import { Availability, Leave } from '@/types';
 
 /**
  * Parse une chaîne de disponibilité du CSV en objet Availability
@@ -185,4 +185,104 @@ export function formatAvailability(availability: Availability): string {
     default:
       return 'Non défini';
   }
+}
+
+/**
+ * Vérifie si un agent est en congé pour une date donnée
+ */
+export function isAgentOnLeave(
+  agentId: string,
+  day: DayOfWeek,
+  leaves: Leave[]
+): boolean {
+  // Convertir le jour en date (pour la semaine en cours)
+  const today = new Date();
+  const dayMap: Record<DayOfWeek, number> = {
+    'LUNDI': 1,
+    'MARDI': 2,
+    'MERCREDI': 3,
+    'JEUDI': 4,
+    'VENDREDI': 5,
+  };
+  
+  // Obtenir la date pour le jour spécifié
+  const currentDayOfWeek = today.getDay(); // 0 = Dimanche, 1 = Lundi...
+  const targetDayOfWeek = dayMap[day];
+  
+  let daysUntilTarget = targetDayOfWeek - currentDayOfWeek;
+  if (daysUntilTarget <= 0) {
+    daysUntilTarget += 7; // Si le jour est passé ou aujourd'hui, prendre la semaine suivante
+  }
+  
+  const targetDate = new Date(today);
+  targetDate.setDate(today.getDate() + daysUntilTarget);
+  const targetDateStr = targetDate.toISOString().split('T')[0]; // YYYY-MM-DD
+  
+  // Vérifier si l'agent a un congé pour cette date
+  return leaves.some(leave => 
+    leave.agent_id === agentId &&
+    leave.statut === 'VALIDE' &&
+    leave.date_debut <= targetDateStr &&
+    leave.date_fin >= targetDateStr
+  );
+}
+
+/**
+ * Vérifie si un agent est disponible en tenant compte des congés
+ */
+export function isAgentAvailable(
+  agentId: string,
+  day: DayOfWeek,
+  timeSlot: 'MATIN' | 'APRES_MIDI',
+  availability: Availability,
+  leaves: Leave[]
+): boolean {
+  // D'abord vérifier les disponibilités habituelles
+  if (!isAvailableForTimeSlot(availability, timeSlot)) {
+    return false;
+  }
+  
+  // Ensuite vérifier si l'agent est en congé
+  if (isAgentOnLeave(agentId, day, leaves)) {
+    return false;
+  }
+  
+  return true;
+}
+
+/**
+ * Obtient le congé d'un agent pour un jour donné
+ */
+export function getAgentLeaveForDay(
+  agentId: string,
+  day: DayOfWeek,
+  leaves: Leave[]
+): Leave | null {
+  const today = new Date();
+  const dayMap: Record<DayOfWeek, number> = {
+    'LUNDI': 1,
+    'MARDI': 2,
+    'MERCREDI': 3,
+    'JEUDI': 4,
+    'VENDREDI': 5,
+  };
+  
+  const currentDayOfWeek = today.getDay();
+  const targetDayOfWeek = dayMap[day];
+  
+  let daysUntilTarget = targetDayOfWeek - currentDayOfWeek;
+  if (daysUntilTarget <= 0) {
+    daysUntilTarget += 7;
+  }
+  
+  const targetDate = new Date(today);
+  targetDate.setDate(today.getDate() + daysUntilTarget);
+  const targetDateStr = targetDate.toISOString().split('T')[0];
+  
+  return leaves.find(leave => 
+    leave.agent_id === agentId &&
+    leave.statut === 'VALIDE' &&
+    leave.date_debut <= targetDateStr &&
+    leave.date_fin >= targetDateStr
+  ) || null;
 }

@@ -7,8 +7,7 @@ const DAYS: DayOfWeek[] = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI'];
 /**
  * Algorithme de placement des agents sur les pôles
  */
-export function generatePlanning(agents: Agent[]): PlacementResult {
-  const assignments: Assignment[] = [];
+export function generatePlanning(agents: Agent[]): { success: boolean; planning: Planning | null; warnings: string[] } {
   const warnings: string[] = [];
   const assignedAgentIds = new Set<string>();
   
@@ -144,7 +143,7 @@ export function generatePlanning(agents: Agent[]): PlacementResult {
 /**
  * Optimise le planning en essayant de mieux répartir les agents
  */
-export function optimizePlanning(planning: Planning, agents: Agent[]): Planning {
+export function optimizePlanning(planning: Planning): Planning {
   // TODO: Implémenter l'optimisation
   // - Équilibrer la charge de travail
   // - Minimiser les conflits

@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
 import Papa from 'papaparse';
-import { Agent, CSVRow, DayOfWeek } from '@/types';
+import { Agent, CSVRow } from '@/types';
 import { parseAvailability } from '@/utils/availabilityParser';
 
 interface CSVUploaderProps {

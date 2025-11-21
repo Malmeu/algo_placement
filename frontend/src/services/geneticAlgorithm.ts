@@ -64,7 +64,7 @@ export function generatePlanningWithGeneticAlgorithm(
       const parent2 = tournamentSelection(population, 3);
 
       // Croisement
-      const child = crossover(parent1, parent2, agents);
+      const child = crossover(parent1, parent2);
 
       // Mutation
       if (Math.random() < mutationRate) {
@@ -169,10 +169,9 @@ function initializePopulation(agents: Agent[], size: number): Chromosome[] {
 }
 
 /**
- * Calculer la fitness d'un chromosome
- * Plus la fitness est élevée, meilleur est le planning
+ * Calculer la fitness d'un planning
  */
-function calculateFitness(chromosome: Chromosome, agents: Agent[]): number {
+function calculateFitness(chromosome: Chromosome): number {
   let fitness = 0;
 
   // 1. Couverture des créneaux (poids: 100)
@@ -195,7 +194,7 @@ function calculateFitness(chromosome: Chromosome, agents: Agent[]): number {
   }
 
   // 3. Diversité des pôles par agent (poids: 30)
-  agentWorkload.forEach((count, agentId) => {
+  agentWorkload.forEach((_, agentId) => {
     const agentAssignments = chromosome.assignments.filter(a => a.agentId === agentId);
     const uniquePoles = new Set(agentAssignments.map(a => a.pole)).size;
     fitness += (uniquePoles / POLES.length) * 30;
@@ -233,7 +232,7 @@ function tournamentSelection(population: Chromosome[], tournamentSize: number): 
 /**
  * Croisement (crossover) entre deux parents
  */
-function crossover(parent1: Chromosome, parent2: Chromosome, agents: Agent[]): Chromosome {
+function crossover(parent1: Chromosome, parent2: Chromosome): Chromosome {
   const child: Assignment[] = [];
   const usedSlots = new Set<string>();
 

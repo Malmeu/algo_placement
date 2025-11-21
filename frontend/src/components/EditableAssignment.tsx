@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Agent, Assignment, Pole, DayOfWeek } from '@/types';
 import { Edit2, Check, X } from 'lucide-react';
 
@@ -9,7 +9,6 @@ interface EditableAssignmentProps {
   timeSlot: 'MATIN' | 'APRES_MIDI';
   agents: Agent[];
   onUpdate: (assignment: Assignment) => void;
-  onRemove?: () => void;
   poleColor: string;
 }
 

@@ -1,4 +1,4 @@
-import { Availability, AvailabilityType } from '@/types';
+import { Availability } from '@/types';
 
 /**
  * Parse une chaîne de disponibilité du CSV en objet Availability

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Agent, DayOfWeek } from '@/types';
-import { X, Plus, Save } from 'lucide-react';
+import { X, Save } from 'lucide-react';
 
 interface AgentFormProps {
   agent?: Agent;

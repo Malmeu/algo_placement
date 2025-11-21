@@ -87,10 +87,14 @@ io.on('connection', (socket) => {
 
 // Export pour Vercel
 export default async (req: VercelRequest, res: VercelResponse) => {
+  // Type assertion pour Vercel socket
+  const socket = res.socket as any;
+  
   // Initialiser Socket.io si pas déjà fait
-  if (!res.socket.server.io) {
+  if (!socket.server?.io) {
     console.log('Initializing Socket.io server...');
-    res.socket.server.io = io;
+    socket.server = socket.server || {};
+    socket.server.io = io;
   }
   
   // Laisser Express gérer la requête

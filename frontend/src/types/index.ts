@@ -68,13 +68,15 @@ export interface CSVRow {
 // Gestion des congés
 export interface Leave {
   id: string;
-  agentId: string;
-  agentNom: string;
-  startDate: string; // Format ISO
-  endDate: string;   // Format ISO
-  type: 'CONGE' | 'MALADIE' | 'FORMATION' | 'AUTRE';
-  reason?: string;
-  createdAt: string;
+  agent_id: string; // Correspond à la colonne SQL
+  agent_nom: string; // Correspond à la colonne SQL
+  type_conge: 'CONGE' | 'MALADIE' | 'FORMATION' | 'AUTRE'; // Correspond à la colonne SQL
+  date_debut: string; // Format YYYY-MM-DD (DATE SQL)
+  date_fin: string;   // Format YYYY-MM-DD (DATE SQL)
+  motif?: string; // Correspond à la colonne SQL
+  statut: 'VALIDE' | 'EN_ATTENTE' | 'REFUSE'; // Correspond à la colonne SQL
+  created_at: string;
+  updated_at: string;
 }
 
 // Analytics

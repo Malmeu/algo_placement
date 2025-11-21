@@ -265,7 +265,7 @@ function App() {
                 <Calendar className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Algo Placement</h1>
+                <h1 className="text-2xl font-bold text-gray-900">Placement d'agent</h1>
                 <p className="text-sm text-gray-500">
                   {user.email} {isAdmin && <span className="text-blue-600 font-semibold">• Admin</span>}
                 </p>

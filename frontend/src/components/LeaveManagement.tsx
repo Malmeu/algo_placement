@@ -18,11 +18,11 @@ export default function LeaveManagement({ agents }: LeaveManagementProps) {
   const [leaves, setLeaves] = useState<Leave[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
-    agentId: '',
-    startDate: '',
-    endDate: '',
-    type: 'CONGE' as Leave['type'],
-    reason: '',
+    agent_id: '',
+    date_debut: '',
+    date_fin: '',
+    type_conge: 'CONGE' as Leave['type_conge'],
+    motif: '',
   });
 
   // Charger les congés depuis localStorage
@@ -41,28 +41,30 @@ export default function LeaveManagement({ agents }: LeaveManagementProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const agent = agents.find(a => a.id === formData.agentId);
+    const agent = agents.find(a => a.id === formData.agent_id);
     if (!agent) return;
 
     const newLeave: Leave = {
       id: `leave-${Date.now()}`,
-      agentId: formData.agentId,
-      agentNom: agent.nom,
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      type: formData.type,
-      reason: formData.reason,
-      createdAt: new Date().toISOString(),
+      agent_id: formData.agent_id,
+      agent_nom: agent.nom,
+      type_conge: formData.type_conge,
+      date_debut: formData.date_debut,
+      date_fin: formData.date_fin,
+      motif: formData.motif,
+      statut: 'VALIDE',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
 
     setLeaves([...leaves, newLeave]);
     setShowForm(false);
     setFormData({
-      agentId: '',
-      startDate: '',
-      endDate: '',
-      type: 'CONGE',
-      reason: '',
+      agent_id: '',
+      date_debut: '',
+      date_fin: '',
+      type_conge: 'CONGE',
+      motif: '',
     });
   };
 
@@ -72,14 +74,14 @@ export default function LeaveManagement({ agents }: LeaveManagementProps) {
     }
   };
 
-  const getLeaveTypeInfo = (type: Leave['type']) => {
+  const getLeaveTypeInfo = (type: Leave['type_conge']) => {
     return LEAVE_TYPES.find(t => t.value === type) || LEAVE_TYPES[0];
   };
 
   const isLeaveActive = (leave: Leave) => {
     const now = new Date();
-    const start = new Date(leave.startDate);
-    const end = new Date(leave.endDate);
+    const start = new Date(leave.date_debut);
+    const end = new Date(leave.date_fin);
     return now >= start && now <= end;
   };
 
@@ -123,7 +125,7 @@ export default function LeaveManagement({ agents }: LeaveManagementProps) {
           </div>
         ) : (
           leaves.map((leave, index) => {
-            const typeInfo = getLeaveTypeInfo(leave.type);
+            const typeInfo = getLeaveTypeInfo(leave.type_conge);
             const active = isLeaveActive(leave);
 
             return (
@@ -137,7 +139,7 @@ export default function LeaveManagement({ agents }: LeaveManagementProps) {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-semibold text-gray-900">{leave.agentNom}</h3>
+                      <h3 className="font-semibold text-gray-900">{leave.agent_nom}</h3>
                       <span className={`px-2 py-1 rounded text-xs font-medium ${typeInfo.color}`}>
                         {typeInfo.label}
                       </span>
@@ -149,12 +151,10 @@ export default function LeaveManagement({ agents }: LeaveManagementProps) {
                     </div>
                     <div className="text-sm text-gray-600">
                       <span className="font-medium">Du</span>{' '}
-                      {new Date(leave.startDate).toLocaleDateString('fr-FR')}
-                      {' '}<span className="font-medium">au</span>{' '}
-                      {new Date(leave.endDate).toLocaleDateString('fr-FR')}
+                      {new Date(leave.date_debut).toLocaleDateString('fr-FR')} - {new Date(leave.date_fin).toLocaleDateString('fr-FR')}
                     </div>
-                    {leave.reason && (
-                      <p className="text-sm text-gray-500 mt-2">{leave.reason}</p>
+                    {leave.motif && (
+                      <p className="text-sm text-gray-500 mt-2">{leave.motif}</p>
                     )}
                   </div>
                   <button
@@ -185,8 +185,8 @@ export default function LeaveManagement({ agents }: LeaveManagementProps) {
                   Agent *
                 </label>
                 <select
-                  value={formData.agentId}
-                  onChange={(e) => setFormData({ ...formData, agentId: e.target.value })}
+                  value={formData.agent_id}
+                  onChange={(e) => setFormData({ ...formData, agent_id: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   required
                 >
@@ -204,8 +204,8 @@ export default function LeaveManagement({ agents }: LeaveManagementProps) {
                   </label>
                   <input
                     type="date"
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    value={formData.date_debut}
+                    onChange={(e) => setFormData({ ...formData, date_debut: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                     required
                   />
@@ -216,8 +216,8 @@ export default function LeaveManagement({ agents }: LeaveManagementProps) {
                   </label>
                   <input
                     type="date"
-                    value={formData.endDate}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    value={formData.date_fin}
+                    onChange={(e) => setFormData({ ...formData, date_fin: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                     required
                   />
@@ -229,8 +229,8 @@ export default function LeaveManagement({ agents }: LeaveManagementProps) {
                   Type *
                 </label>
                 <select
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value as Leave['type'] })}
+                  value={formData.type_conge}
+                  onChange={(e) => setFormData({ ...formData, type_conge: e.target.value as Leave['type_conge'] })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 >
                   {LEAVE_TYPES.map(type => (
@@ -244,8 +244,8 @@ export default function LeaveManagement({ agents }: LeaveManagementProps) {
                   Motif (optionnel)
                 </label>
                 <textarea
-                  value={formData.reason}
-                  onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                  value={formData.motif}
+                  onChange={(e) => setFormData({ ...formData, motif: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   rows={3}
                   placeholder="Raison du congé..."

@@ -1,24 +1,79 @@
 import { useState, useEffect } from 'react';
-import { Upload, Calendar, Users, BarChart3, Plus, History, Eye } from 'lucide-react';
+import { Upload, Calendar, Users, BarChart3, Plus, History, Eye, Briefcase, LogOut, Zap } from 'lucide-react';
+import { useAuth } from './contexts/AuthContext';
+import LoginPage from './components/LoginPage';
 import CSVUploader from './components/CSVUploader';
 import AgentsList from './components/AgentsList';
 import PlanningCalendar from './components/PlanningCalendar';
 import AgentForm from './components/AgentForm';
 import PlanningHistory from './components/PlanningHistory';
 import AgentView from './components/AgentView';
+import LeaveManagement from './components/LeaveManagement';
+import AnalyticsDashboard from './components/AnalyticsDashboard';
 import NotificationBanner, { useNotifications } from './components/NotificationBanner';
 import { Agent, Planning } from './types';
 import { generatePlanning } from './services/placementAlgorithm';
+import { generatePlanningWithGeneticAlgorithm } from './services/geneticAlgorithm';
 import { saveAgents, loadAgents, savePlanning, deleteAgent as deleteAgentFromDb } from './services/supabaseService';
+import { realtimeService } from './services/realtimeService';
 
 function App() {
+  const { user, loading: authLoading, signOut, isAdmin } = useAuth();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [planning, setPlanning] = useState<Planning | null>(null);
-  const [activeTab, setActiveTab] = useState<'upload' | 'agents' | 'planning' | 'history' | 'agentView' | 'stats'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'agents' | 'planning' | 'history' | 'agentView' | 'leaves' | 'stats'>('upload');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showAgentForm, setShowAgentForm] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | undefined>(undefined);
+  const [useGeneticAlgorithm, setUseGeneticAlgorithm] = useState(false);
   const notifications = useNotifications();
+
+  // Si pas connecté, afficher la page de login
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
+  // Connexion WebSocket au démarrage
+  useEffect(() => {
+    if (user) {
+      realtimeService.connect();
+      realtimeService.joinSession(user.id, user.email || 'Utilisateur');
+
+      // Écouter les mises à jour en temps réel
+      realtimeService.on('planning:updated', (data: any) => {
+        if (data.userId !== user.id) {
+          setPlanning(data.planning);
+          notifications.info('Planning mis à jour par un autre utilisateur');
+        }
+      });
+
+      realtimeService.on('agent:added', (data: any) => {
+        if (data.userId !== user.id) {
+          setAgents(prev => [...prev, data.agent]);
+          notifications.info(`Agent ${data.agent.nom} ajouté par un autre utilisateur`);
+        }
+      });
+
+      realtimeService.on('user:joined', (data: any) => {
+        notifications.info(`${data.userEmail} a rejoint la session`);
+      });
+
+      return () => {
+        realtimeService.disconnect();
+      };
+    }
+  }, [user]);
 
   // Charger les agents depuis Supabase au démarrage
   useEffect(() => {
@@ -105,20 +160,36 @@ function App() {
 
   const handleGeneratePlanning = async () => {
     if (agents.length === 0) {
-      alert('Veuillez d\'abord importer un fichier CSV');
+      alert('Veuillez d\'abord importer un fichier CSV ou ajouter des agents');
       return;
     }
 
     setIsGenerating(true);
     try {
-      // Simuler un délai pour l'animation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const result = generatePlanning(agents);
+      notifications.info(useGeneticAlgorithm ? '🧬 Génération avec algorithme génétique...' : '⚡ Génération rapide...');
+      
+      // Utiliser l'algorithme sélectionné
+      const result = useGeneticAlgorithm 
+        ? generatePlanningWithGeneticAlgorithm(agents)
+        : await (async () => {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            return generatePlanning(agents);
+          })();
       
       if (result.success) {
         setPlanning(result.planning);
         setActiveTab('planning');
-        notifications.success('Planning généré avec succès !');
+        
+        // Envoyer la mise à jour via WebSocket
+        if (user) {
+          realtimeService.sendPlanningUpdate(result.planning, user.id);
+        }
+        
+        notifications.success(
+          useGeneticAlgorithm 
+            ? '🧬 Planning optimisé généré avec succès !' 
+            : '⚡ Planning généré avec succès !'
+        );
         
         if (result.warnings.length > 0) {
           result.warnings.forEach(warning => {
@@ -130,7 +201,7 @@ function App() {
       }
     } catch (error) {
       console.error('Erreur:', error);
-      alert('Une erreur est survenue lors de la génération du planning');
+      notifications.error('Une erreur est survenue lors de la génération du planning');
     } finally {
       setIsGenerating(false);
     }
@@ -148,27 +219,58 @@ function App() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Algo Placement</h1>
-                <p className="text-sm text-gray-500">Planification intelligente d'agents</p>
+                <p className="text-sm text-gray-500">
+                  {user.email} {isAdmin && <span className="text-blue-600 font-semibold">• Admin</span>}
+                </p>
               </div>
             </div>
             
-            <button
-              onClick={handleGeneratePlanning}
-              disabled={agents.length === 0 || isGenerating}
-              className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg flex items-center space-x-2"
-            >
-              {isGenerating ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Génération...</span>
-                </>
-              ) : (
-                <>
-                  <BarChart3 className="w-5 h-5" />
-                  <span>Générer le planning</span>
-                </>
-              )}
-            </button>
+            <div className="flex items-center gap-3">
+              {/* Toggle algorithme génétique */}
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
+                <Zap size={18} className={useGeneticAlgorithm ? 'text-yellow-600' : 'text-gray-400'} />
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={useGeneticAlgorithm}
+                    onChange={(e) => setUseGeneticAlgorithm(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div className={`relative w-11 h-6 rounded-full transition-colors ${useGeneticAlgorithm ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                    <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${useGeneticAlgorithm ? 'translate-x-5' : ''}`} />
+                  </div>
+                  <span className="ml-2 text-sm font-medium text-gray-700">
+                    {useGeneticAlgorithm ? 'Génétique' : 'Rapide'}
+                  </span>
+                </label>
+              </div>
+
+              <button
+                onClick={handleGeneratePlanning}
+                disabled={agents.length === 0 || isGenerating}
+                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg flex items-center space-x-2"
+              >
+                {isGenerating ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Génération...</span>
+                  </>
+                ) : (
+                  <>
+                    <BarChart3 className="w-5 h-5" />
+                    <span>Générer le planning</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={signOut}
+                className="p-2.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Déconnexion"
+              >
+                <LogOut size={20} />
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -210,10 +312,16 @@ function App() {
             disabled={!planning}
           />
           <TabButton
+            active={activeTab === 'leaves'}
+            onClick={() => setActiveTab('leaves')}
+            icon={<Briefcase className="w-5 h-5" />}
+            label="Congés"
+          />
+          <TabButton
             active={activeTab === 'stats'}
             onClick={() => setActiveTab('stats')}
             icon={<BarChart3 className="w-5 h-5" />}
-            label="Statistiques"
+            label="Analytics"
             disabled={!planning}
           />
         </div>
@@ -268,12 +376,13 @@ function App() {
           {activeTab === 'agentView' && (
             <AgentView agents={agents} planning={planning} />
           )}
+
+          {activeTab === 'leaves' && (
+            <LeaveManagement agents={agents} />
+          )}
           
           {activeTab === 'stats' && planning && (
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold mb-4">Statistiques du planning</h2>
-              <p className="text-gray-600">Statistiques à venir...</p>
-            </div>
+            <AnalyticsDashboard planning={planning} agents={agents} />
           )}
         </div>
       </main>

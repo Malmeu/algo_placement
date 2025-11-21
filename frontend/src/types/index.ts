@@ -64,3 +64,40 @@ export interface CSVRow {
   JEUDI: string;
   VENDREDI: string;
 }
+
+// Gestion des congés
+export interface Leave {
+  id: string;
+  agentId: string;
+  agentNom: string;
+  startDate: string; // Format ISO
+  endDate: string;   // Format ISO
+  type: 'CONGE' | 'MALADIE' | 'FORMATION' | 'AUTRE';
+  reason?: string;
+  createdAt: string;
+}
+
+// Analytics
+export interface AgentStats {
+  agentId: string;
+  agentNom: string;
+  totalAssignments: number;
+  totalHours: number;
+  poleDistribution: Record<Pole, number>;
+  morningShifts: number;
+  afternoonShifts: number;
+  utilizationRate: number; // Pourcentage d'utilisation
+}
+
+export interface PlanningAnalytics {
+  planningId: string;
+  totalAssignments: number;
+  coverageRate: number; // Pourcentage de couverture
+  agentStats: AgentStats[];
+  poleStats: Record<Pole, {
+    totalAssignments: number;
+    coverageRate: number;
+    uniqueAgents: number;
+  }>;
+  warnings: string[];
+}

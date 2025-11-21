@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Agent, Leave } from '@/types';
 import { Calendar, Plus, Trash2, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';

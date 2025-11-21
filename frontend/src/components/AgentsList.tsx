@@ -1,14 +1,16 @@
-import { User } from 'lucide-react';
+import { User, Edit2, Trash2 } from 'lucide-react';
 import { Agent, DayOfWeek } from '@/types';
 import { getAvailabilityColor, formatAvailability } from '@/utils/availabilityParser';
 
 interface AgentsListProps {
   agents: Agent[];
+  onEdit?: (agent: Agent) => void;
+  onDelete?: (agentId: string) => void;
 }
 
 const DAYS: DayOfWeek[] = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI'];
 
-export default function AgentsList({ agents }: AgentsListProps) {
+export default function AgentsList({ agents, onEdit, onDelete }: AgentsListProps) {
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex items-center justify-between mb-6">
@@ -41,6 +43,30 @@ export default function AgentsList({ agents }: AgentsListProps) {
                     <p className="text-sm text-gray-500">ID: {agent.id}</p>
                   </div>
                 </div>
+                
+                {/* Boutons d'action */}
+                {(onEdit || onDelete) && (
+                  <div className="flex gap-2">
+                    {onEdit && (
+                      <button
+                        onClick={() => onEdit(agent)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Modifier"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button
+                        onClick={() => onDelete(agent.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Supprimer"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Disponibilités */}

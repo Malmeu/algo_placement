@@ -25,6 +25,7 @@ export function generatePlanning(agents: Agent[]): PlacementResult {
   // Pour chaque jour de la semaine
   DAYS.forEach(day => {
     // Suivre les agents déjà assignés ce jour-là par créneau
+    // Un agent peut travailler matin ET après-midi (mais pas sur 2 pôles différents le même créneau)
     const assignedMorning = new Set<string>();
     const assignedAfternoon = new Set<string>();
     
@@ -36,6 +37,7 @@ export function generatePlanning(agents: Agent[]): PlacementResult {
         const isAvailable = isAvailableForTimeSlot(availability, 'MATIN');
         const notAssignedMorning = !assignedMorning.has(agent.id);
         
+        // Un agent peut travailler le matin même s'il a déjà travaillé l'après-midi
         return isAvailable && notAssignedMorning;
       });
 

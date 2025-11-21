@@ -1,13 +1,15 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Agent, Planning, DayOfWeek, Pole } from '@/types';
-import { Download } from 'lucide-react';
+import { Agent, Planning, DayOfWeek, Pole, Assignment } from '@/types';
+import { Download, Edit } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import EditableAssignment from './EditableAssignment';
 
 interface PlanningCalendarProps {
   planning: Planning;
   agents: Agent[];
+  onPlanningUpdate?: (updatedPlanning: Planning) => void;
 }
 
 const DAYS: DayOfWeek[] = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI'];
@@ -20,13 +22,33 @@ const POLE_COLORS: Record<Pole, string> = {
   'Timeone': 'bg-orange-100 text-orange-800 border-orange-300',
 };
 
-export default function PlanningCalendar({ planning, agents }: PlanningCalendarProps) {
+export default function PlanningCalendar({ planning, agents, onPlanningUpdate }: PlanningCalendarProps) {
   const planningRef = useRef<HTMLDivElement>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [localPlanning, setLocalPlanning] = useState(planning);
 
   const getAssignmentsForDayAndPole = (day: DayOfWeek, pole: Pole) => {
-    return planning.assignments.filter(
+    return localPlanning.assignments.filter(
       (assignment) => assignment.jour === day && assignment.pole === pole
     );
+  };
+
+  const handleUpdateAssignment = (newAssignment: Assignment) => {
+    const updatedAssignments = localPlanning.assignments.filter(
+      a => !(a.pole === newAssignment.pole && a.jour === newAssignment.jour && a.timeSlot === newAssignment.timeSlot)
+    );
+    updatedAssignments.push(newAssignment);
+
+    const updatedPlanning: Planning = {
+      ...localPlanning,
+      assignments: updatedAssignments,
+      updatedAt: new Date().toISOString(),
+    };
+
+    setLocalPlanning(updatedPlanning);
+    if (onPlanningUpdate) {
+      onPlanningUpdate(updatedPlanning);
+    }
   };
 
   const exportToPDF = async () => {
@@ -78,14 +100,27 @@ export default function PlanningCalendar({ planning, agents }: PlanningCalendarP
           </p>
         </div>
         
-        {/* Bouton Export PDF */}
-        <button
-          onClick={exportToPDF}
-          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-md"
-        >
-          <Download size={20} />
-          Exporter en PDF
-        </button>
+        {/* Boutons d'action */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsEditMode(!isEditMode)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors shadow-md ${
+              isEditMode
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            <Edit size={20} />
+            {isEditMode ? 'Mode lecture' : 'Mode édition'}
+          </button>
+          <button
+            onClick={exportToPDF}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-md"
+          >
+            <Download size={20} />
+            Exporter en PDF
+          </button>
+        </div>
       </div>
 
       {/* Grille du planning */}
@@ -132,7 +167,17 @@ export default function PlanningCalendar({ planning, agents }: PlanningCalendarP
                       className="p-2 border-2 border-gray-200 rounded-lg hover:border-blue-400 transition-colors min-h-[100px] flex flex-col gap-1"
                     >
                       {/* Matin */}
-                      {morningAssignment ? (
+                      {isEditMode ? (
+                        <EditableAssignment
+                          assignment={morningAssignment || null}
+                          pole={pole}
+                          day={day}
+                          timeSlot="MATIN"
+                          agents={agents}
+                          onUpdate={handleUpdateAssignment}
+                          poleColor={POLE_COLORS[pole]}
+                        />
+                      ) : morningAssignment ? (
                         <div className={`w-full p-1.5 rounded border ${POLE_COLORS[pole]} text-center`}>
                           <div className="font-medium text-xs">{morningAssignment.agentNom}</div>
                           <div className="text-[10px] mt-0.5 opacity-75">🌅 Matin (8h-12h)</div>
@@ -142,7 +187,17 @@ export default function PlanningCalendar({ planning, agents }: PlanningCalendarP
                       )}
                       
                       {/* Après-midi */}
-                      {afternoonAssignment ? (
+                      {isEditMode ? (
+                        <EditableAssignment
+                          assignment={afternoonAssignment || null}
+                          pole={pole}
+                          day={day}
+                          timeSlot="APRES_MIDI"
+                          agents={agents}
+                          onUpdate={handleUpdateAssignment}
+                          poleColor={POLE_COLORS[pole]}
+                        />
+                      ) : afternoonAssignment ? (
                         <div className={`w-full p-1.5 rounded border ${POLE_COLORS[pole]} text-center`}>
                           <div className="font-medium text-xs">{afternoonAssignment.agentNom}</div>
                           <div className="text-[10px] mt-0.5 opacity-75">☀️ Après-midi (13h-17h)</div>

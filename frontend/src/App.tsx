@@ -1,20 +1,106 @@
-import { useState } from 'react';
-import { Upload, Calendar, Users, BarChart3 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Upload, Calendar, Users, BarChart3, Plus, History, Eye } from 'lucide-react';
 import CSVUploader from './components/CSVUploader';
 import AgentsList from './components/AgentsList';
 import PlanningCalendar from './components/PlanningCalendar';
+import AgentForm from './components/AgentForm';
+import PlanningHistory from './components/PlanningHistory';
+import AgentView from './components/AgentView';
+import NotificationBanner, { useNotifications } from './components/NotificationBanner';
 import { Agent, Planning } from './types';
 import { generatePlanning } from './services/placementAlgorithm';
+import { saveAgents, loadAgents, savePlanning, deleteAgent as deleteAgentFromDb } from './services/supabaseService';
 
 function App() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [planning, setPlanning] = useState<Planning | null>(null);
-  const [activeTab, setActiveTab] = useState<'upload' | 'agents' | 'planning' | 'stats'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'agents' | 'planning' | 'history' | 'agentView' | 'stats'>('upload');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showAgentForm, setShowAgentForm] = useState(false);
+  const [editingAgent, setEditingAgent] = useState<Agent | undefined>(undefined);
+  const notifications = useNotifications();
+
+  // Charger les agents depuis Supabase au démarrage
+  useEffect(() => {
+    const fetchAgents = async () => {
+      const result = await loadAgents();
+      if (result.success && result.agents) {
+        setAgents(result.agents);
+        notifications.success(`${result.agents.length} agent(s) chargé(s) depuis la base de données`);
+      } else if (result.error) {
+        notifications.error('Erreur lors du chargement des agents : ' + result.error);
+        // Fallback sur localStorage
+        const savedAgents = localStorage.getItem('agents');
+        if (savedAgents) {
+          setAgents(JSON.parse(savedAgents));
+          notifications.info('Agents chargés depuis le cache local');
+        }
+      }
+    };
+    fetchAgents();
+  }, []);
+
+  // Sauvegarder les agents dans Supabase et localStorage
+  useEffect(() => {
+    if (agents.length > 0) {
+      localStorage.setItem('agents', JSON.stringify(agents));
+      saveAgents(agents).then(result => {
+        if (!result.success) {
+          console.error('Erreur sauvegarde Supabase:', result.error);
+        }
+      });
+    }
+  }, [agents]);
+
+  // Sauvegarder le planning dans Supabase et localStorage
+  useEffect(() => {
+    if (planning) {
+      localStorage.setItem('currentPlanning', JSON.stringify(planning));
+      savePlanning(planning).then(result => {
+        if (!result.success) {
+          console.error('Erreur sauvegarde planning:', result.error);
+        }
+      });
+    }
+  }, [planning]);
 
   const handleCSVUploaded = (uploadedAgents: Agent[]) => {
     setAgents(uploadedAgents);
     setActiveTab('agents');
+  };
+
+  const handleAddAgent = () => {
+    setEditingAgent(undefined);
+    setShowAgentForm(true);
+  };
+
+  const handleEditAgent = (agent: Agent) => {
+    setEditingAgent(agent);
+    setShowAgentForm(true);
+  };
+
+  const handleSaveAgent = (agent: Agent) => {
+    if (editingAgent) {
+      // Modifier un agent existant
+      setAgents(agents.map(a => a.id === agent.id ? agent : a));
+    } else {
+      // Ajouter un nouvel agent
+      setAgents([...agents, agent]);
+    }
+    setShowAgentForm(false);
+    setEditingAgent(undefined);
+  };
+
+  const handleDeleteAgent = async (agentId: string) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet agent ?')) {
+      setAgents(agents.filter(a => a.id !== agentId));
+      const result = await deleteAgentFromDb(agentId);
+      if (result.success) {
+        notifications.success('Agent supprimé avec succès');
+      } else {
+        notifications.error('Erreur lors de la suppression : ' + result.error);
+      }
+    }
   };
 
   const handleGeneratePlanning = async () => {
@@ -32,12 +118,15 @@ function App() {
       if (result.success) {
         setPlanning(result.planning);
         setActiveTab('planning');
+        notifications.success('Planning généré avec succès !');
         
         if (result.warnings.length > 0) {
-          console.warn('Avertissements:', result.warnings);
+          result.warnings.forEach(warning => {
+            notifications.warning(warning, 8000);
+          });
         }
       } else {
-        alert('Erreur lors de la génération du planning');
+        notifications.error('Erreur lors de la génération du planning');
       }
     } catch (error) {
       console.error('Erreur:', error);
@@ -108,6 +197,19 @@ function App() {
             disabled={!planning}
           />
           <TabButton
+            active={activeTab === 'history'}
+            onClick={() => setActiveTab('history')}
+            icon={<History className="w-5 h-5" />}
+            label="Historique"
+          />
+          <TabButton
+            active={activeTab === 'agentView'}
+            onClick={() => setActiveTab('agentView')}
+            icon={<Eye className="w-5 h-5" />}
+            label="Vue agent"
+            disabled={!planning}
+          />
+          <TabButton
             active={activeTab === 'stats'}
             onClick={() => setActiveTab('stats')}
             icon={<BarChart3 className="w-5 h-5" />}
@@ -125,11 +227,46 @@ function App() {
           )}
           
           {activeTab === 'agents' && (
-            <AgentsList agents={agents} />
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold text-gray-900">Gestion des agents</h2>
+                <button
+                  onClick={handleAddAgent}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md"
+                >
+                  <Plus size={20} />
+                  Ajouter un agent
+                </button>
+              </div>
+              <AgentsList 
+                agents={agents} 
+                onEdit={handleEditAgent}
+                onDelete={handleDeleteAgent}
+              />
+            </div>
           )}
           
           {activeTab === 'planning' && planning && (
-            <PlanningCalendar planning={planning} agents={agents} />
+            <PlanningCalendar 
+              planning={planning} 
+              agents={agents}
+              onPlanningUpdate={setPlanning}
+            />
+          )}
+
+          {activeTab === 'history' && (
+            <PlanningHistory 
+              onSelectPlanning={(selectedPlanning) => {
+                setPlanning(selectedPlanning);
+                setActiveTab('planning');
+                notifications.info('Planning chargé depuis l\'historique');
+              }}
+              currentPlanningId={planning?.id}
+            />
+          )}
+
+          {activeTab === 'agentView' && (
+            <AgentView agents={agents} planning={planning} />
           )}
           
           {activeTab === 'stats' && planning && (
@@ -140,6 +277,24 @@ function App() {
           )}
         </div>
       </main>
+
+      {/* Notifications */}
+      <NotificationBanner 
+        notifications={notifications.notifications}
+        onDismiss={notifications.dismissNotification}
+      />
+
+      {/* Modal formulaire agent */}
+      {showAgentForm && (
+        <AgentForm
+          agent={editingAgent}
+          onSave={handleSaveAgent}
+          onCancel={() => {
+            setShowAgentForm(false);
+            setEditingAgent(undefined);
+          }}
+        />
+      )}
     </div>
   );
 }

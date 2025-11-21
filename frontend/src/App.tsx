@@ -123,8 +123,36 @@ function App() {
   }
 
   const handleCSVUploaded = (uploadedAgents: Agent[]) => {
-    setAgents(uploadedAgents);
-    setActiveTab('agents');
+    // Vérifier les doublons par nom
+    const existingNames = new Set(agents.map(a => a.nom.toLowerCase().trim()));
+    const newAgents: Agent[] = [];
+    const duplicates: string[] = [];
+
+    uploadedAgents.forEach(agent => {
+      const normalizedName = agent.nom.toLowerCase().trim();
+      if (existingNames.has(normalizedName)) {
+        duplicates.push(agent.nom);
+      } else {
+        newAgents.push(agent);
+        existingNames.add(normalizedName);
+      }
+    });
+
+    if (newAgents.length > 0) {
+      setAgents([...agents, ...newAgents]);
+      notifications.success(`${newAgents.length} agent(s) importé(s) avec succès`);
+    }
+
+    if (duplicates.length > 0) {
+      notifications.warning(
+        `${duplicates.length} doublon(s) ignoré(s) : ${duplicates.slice(0, 3).join(', ')}${duplicates.length > 3 ? '...' : ''}`,
+        10000
+      );
+    }
+
+    if (newAgents.length > 0) {
+      setActiveTab('agents');
+    }
   };
 
   const handleAddAgent = () => {
@@ -141,9 +169,25 @@ function App() {
     if (editingAgent) {
       // Modifier un agent existant
       setAgents(agents.map(a => a.id === agent.id ? agent : a));
+      notifications.success('Agent modifié avec succès');
     } else {
+      // Vérifier si un agent avec le même nom existe déjà
+      const normalizedName = agent.nom.toLowerCase().trim();
+      const duplicate = agents.find(a => a.nom.toLowerCase().trim() === normalizedName);
+
+      if (duplicate) {
+        notifications.error(`Un agent nommé "${agent.nom}" existe déjà !`);
+        return;
+      }
+
       // Ajouter un nouvel agent
       setAgents([...agents, agent]);
+      notifications.success('Agent ajouté avec succès');
+      
+      // Envoyer via WebSocket
+      if (user) {
+        realtimeService.sendAgentAdded(agent, user.id);
+      }
     }
     setShowAgentForm(false);
     setEditingAgent(undefined);

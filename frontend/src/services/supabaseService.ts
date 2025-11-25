@@ -1,5 +1,5 @@
-import { supabase, DbAgent, DbPlanning } from '@/lib/supabase';
-import { Agent, Planning } from '@/types';
+import { supabase, DbAgent, DbPlanning, DbFixedAssignment } from '@/lib/supabase';
+import { Agent, Planning, FixedAssignment, Pole, DayOfWeek } from '@/types';
 
 /**
  * Service pour gérer les interactions avec Supabase
@@ -169,6 +169,107 @@ export async function deletePlanning(planningId: string): Promise<{ success: boo
     return { success: true };
   } catch (error: any) {
     console.error('Erreur lors de la suppression du planning:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ============= ASSIGNATIONS FIXES =============
+
+export async function saveFixedAssignment(
+  agentId: string,
+  agentNom: string,
+  pole: Pole,
+  jour: DayOfWeek
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const id = `${agentId}_${jour}_${Date.now()}`;
+    const dbFixedAssignment: DbFixedAssignment = {
+      id,
+      agent_id: agentId,
+      agent_nom: agentNom,
+      pole,
+      jour,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase
+      .from('fixed_assignments')
+      .upsert(dbFixedAssignment, { onConflict: 'agent_id,jour' });
+
+    if (error) throw error;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Erreur lors de la sauvegarde de l\'assignation fixe:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function loadFixedAssignments(): Promise<{ success: boolean; fixedAssignments?: FixedAssignment[]; error?: string }> {
+  try {
+    const { data, error } = await supabase
+      .from('fixed_assignments')
+      .select('*')
+      .order('jour', { ascending: true })
+      .order('agent_nom', { ascending: true });
+
+    if (error) throw error;
+
+    const fixedAssignments: FixedAssignment[] = (data || []).map((db: DbFixedAssignment) => ({
+      id: db.id,
+      agent_id: db.agent_id,
+      agent_nom: db.agent_nom,
+      pole: db.pole as Pole,
+      jour: db.jour as DayOfWeek,
+      created_at: db.created_at,
+      updated_at: db.updated_at,
+    }));
+
+    return { success: true, fixedAssignments };
+  } catch (error: any) {
+    console.error('Erreur lors du chargement des assignations fixes:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteFixedAssignment(assignmentId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from('fixed_assignments')
+      .delete()
+      .eq('id', assignmentId);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (error: any) {
+    console.error('Erreur lors de la suppression de l\'assignation fixe:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getFixedAssignmentsByDay(jour: DayOfWeek): Promise<{ success: boolean; fixedAssignments?: FixedAssignment[]; error?: string }> {
+  try {
+    const { data, error } = await supabase
+      .from('fixed_assignments')
+      .select('*')
+      .eq('jour', jour)
+      .order('agent_nom', { ascending: true });
+
+    if (error) throw error;
+
+    const fixedAssignments: FixedAssignment[] = (data || []).map((db: DbFixedAssignment) => ({
+      id: db.id,
+      agent_id: db.agent_id,
+      agent_nom: db.agent_nom,
+      pole: db.pole as Pole,
+      jour: db.jour as DayOfWeek,
+      created_at: db.created_at,
+      updated_at: db.updated_at,
+    }));
+
+    return { success: true, fixedAssignments };
+  } catch (error: any) {
+    console.error('Erreur lors du chargement des assignations fixes par jour:', error);
     return { success: false, error: error.message };
   }
 }

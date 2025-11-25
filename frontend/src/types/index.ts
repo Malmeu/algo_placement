@@ -103,3 +103,14 @@ export interface PlanningAnalytics {
   }>;
   warnings: string[];
 }
+
+// Assignations fixes
+export interface FixedAssignment {
+  id: string;
+  agent_id: string;
+  agent_nom: string;
+  pole: Pole;
+  jour: DayOfWeek;
+  created_at: string;
+  updated_at: string;
+}

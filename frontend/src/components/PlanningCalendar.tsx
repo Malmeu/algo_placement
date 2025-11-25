@@ -4,7 +4,7 @@ import { Agent, Planning, DayOfWeek, Pole, Assignment } from '@/types';
 import { Download, Edit } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import EditableAssignment from './EditableAssignment';
+import MultiAgentEditor from './MultiAgentEditor';
 
 interface PlanningCalendarProps {
   planning: Planning;
@@ -33,11 +33,16 @@ export default function PlanningCalendar({ planning, agents, onPlanningUpdate }:
     );
   };
 
-  const handleUpdateAssignment = (newAssignment: Assignment) => {
-    const updatedAssignments = localPlanning.assignments.filter(
-      a => !(a.pole === newAssignment.pole && a.jour === newAssignment.jour && a.timeSlot === newAssignment.timeSlot)
+  const [editingCell, setEditingCell] = useState<{ pole: Pole; day: DayOfWeek; timeSlot: 'MATIN' | 'APRES_MIDI' | 'JOURNEE' } | null>(null);
+
+  const handleUpdateAssignments = (pole: Pole, day: DayOfWeek, timeSlot: 'MATIN' | 'APRES_MIDI' | 'JOURNEE', newAssignments: Assignment[]) => {
+    // Supprimer les anciennes assignations pour ce créneau
+    const filteredAssignments = localPlanning.assignments.filter(
+      a => !(a.pole === pole && a.jour === day && a.timeSlot === timeSlot)
     );
-    updatedAssignments.push(newAssignment);
+    
+    // Ajouter les nouvelles assignations
+    const updatedAssignments = [...filteredAssignments, ...newAssignments];
 
     const updatedPlanning: Planning = {
       ...localPlanning,
@@ -49,6 +54,8 @@ export default function PlanningCalendar({ planning, agents, onPlanningUpdate }:
     if (onPlanningUpdate) {
       onPlanningUpdate(updatedPlanning);
     }
+    
+    setEditingCell(null);
   };
 
   const exportToPDF = async () => {
@@ -155,8 +162,9 @@ export default function PlanningCalendar({ planning, agents, onPlanningUpdate }:
                 {/* Cellules pour chaque jour */}
                 {DAYS.map((day) => {
                   const assignments = getAssignmentsForDayAndPole(day, pole);
-                  const morningAssignment = assignments.find(a => a.timeSlot === 'MATIN');
-                  const afternoonAssignment = assignments.find(a => a.timeSlot === 'APRES_MIDI');
+                  const fullDayAssignments = assignments.filter(a => a.timeSlot === 'JOURNEE');
+                  const morningAssignments = assignments.filter(a => a.timeSlot === 'MATIN');
+                  const afternoonAssignments = assignments.filter(a => a.timeSlot === 'APRES_MIDI');
 
                   return (
                     <motion.div
@@ -164,46 +172,117 @@ export default function PlanningCalendar({ planning, agents, onPlanningUpdate }:
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: 0.3, delay: Math.random() * 0.5 }}
-                      className="p-2 border-2 border-gray-200 rounded-lg hover:border-blue-400 transition-colors min-h-[100px] flex flex-col gap-1"
+                      className="p-2 border-2 border-gray-200 rounded-lg hover:border-blue-400 transition-colors min-h-[120px] flex flex-col gap-1"
                     >
-                      {/* Matin */}
                       {isEditMode ? (
-                        <EditableAssignment
-                          assignment={morningAssignment || null}
-                          pole={pole}
-                          day={day}
-                          timeSlot="MATIN"
-                          agents={agents}
-                          onUpdate={handleUpdateAssignment}
-                          poleColor={POLE_COLORS[pole]}
-                        />
-                      ) : morningAssignment ? (
-                        <div className={`w-full p-1.5 rounded border ${POLE_COLORS[pole]} text-center`}>
-                          <div className="font-medium text-xs">{morningAssignment.agentNom}</div>
-                          <div className="text-[10px] mt-0.5 opacity-75">🌅 Matin (8h-12h)</div>
+                        // Mode édition : Afficher les éditeurs multi-agents
+                        <div className="space-y-2">
+                          {/* Éditeur Journée */}
+                          {editingCell?.pole === pole && editingCell?.day === day && editingCell?.timeSlot === 'JOURNEE' ? (
+                            <MultiAgentEditor
+                              assignments={fullDayAssignments}
+                              pole={pole}
+                              day={day}
+                              timeSlot="JOURNEE"
+                              agents={agents}
+                              onUpdate={(newAssignments) => handleUpdateAssignments(pole, day, 'JOURNEE', newAssignments)}
+                              onCancel={() => setEditingCell(null)}
+                              poleColor={POLE_COLORS[pole]}
+                            />
+                          ) : (
+                            <button
+                              onClick={() => setEditingCell({ pole, day, timeSlot: 'JOURNEE' })}
+                              className="w-full p-2 text-xs bg-blue-50 hover:bg-blue-100 border border-blue-300 rounded transition-colors"
+                            >
+                              📅 Journée ({fullDayAssignments.length} agent{fullDayAssignments.length > 1 ? 's' : ''})
+                            </button>
+                          )}
+                          
+                          {/* Éditeur Matin */}
+                          {editingCell?.pole === pole && editingCell?.day === day && editingCell?.timeSlot === 'MATIN' ? (
+                            <MultiAgentEditor
+                              assignments={morningAssignments}
+                              pole={pole}
+                              day={day}
+                              timeSlot="MATIN"
+                              agents={agents}
+                              onUpdate={(newAssignments) => handleUpdateAssignments(pole, day, 'MATIN', newAssignments)}
+                              onCancel={() => setEditingCell(null)}
+                              poleColor={POLE_COLORS[pole]}
+                            />
+                          ) : (
+                            <button
+                              onClick={() => setEditingCell({ pole, day, timeSlot: 'MATIN' })}
+                              className="w-full p-2 text-xs bg-blue-50 hover:bg-blue-100 border border-blue-300 rounded transition-colors"
+                            >
+                              🌅 Matin ({morningAssignments.length} agent{morningAssignments.length > 1 ? 's' : ''})
+                            </button>
+                          )}
+                          
+                          {/* Éditeur Après-midi */}
+                          {editingCell?.pole === pole && editingCell?.day === day && editingCell?.timeSlot === 'APRES_MIDI' ? (
+                            <MultiAgentEditor
+                              assignments={afternoonAssignments}
+                              pole={pole}
+                              day={day}
+                              timeSlot="APRES_MIDI"
+                              agents={agents}
+                              onUpdate={(newAssignments) => handleUpdateAssignments(pole, day, 'APRES_MIDI', newAssignments)}
+                              onCancel={() => setEditingCell(null)}
+                              poleColor={POLE_COLORS[pole]}
+                            />
+                          ) : (
+                            <button
+                              onClick={() => setEditingCell({ pole, day, timeSlot: 'APRES_MIDI' })}
+                              className="w-full p-2 text-xs bg-blue-50 hover:bg-blue-100 border border-blue-300 rounded transition-colors"
+                            >
+                              ☀️ Après-midi ({afternoonAssignments.length} agent{afternoonAssignments.length > 1 ? 's' : ''})
+                            </button>
+                          )}
                         </div>
                       ) : (
-                        <div className="text-gray-400 text-[10px] text-center py-1">Matin non assigné</div>
-                      )}
-                      
-                      {/* Après-midi */}
-                      {isEditMode ? (
-                        <EditableAssignment
-                          assignment={afternoonAssignment || null}
-                          pole={pole}
-                          day={day}
-                          timeSlot="APRES_MIDI"
-                          agents={agents}
-                          onUpdate={handleUpdateAssignment}
-                          poleColor={POLE_COLORS[pole]}
-                        />
-                      ) : afternoonAssignment ? (
-                        <div className={`w-full p-1.5 rounded border ${POLE_COLORS[pole]} text-center`}>
-                          <div className="font-medium text-xs">{afternoonAssignment.agentNom}</div>
-                          <div className="text-[10px] mt-0.5 opacity-75">☀️ Après-midi (13h-17h)</div>
-                        </div>
-                      ) : (
-                        <div className="text-gray-400 text-[10px] text-center py-1">Après-midi non assigné</div>
+                        // Mode affichage : Afficher tous les agents
+                        <>
+                          {/* Affichage journées complètes */}
+                          {fullDayAssignments.length > 0 && (
+                            <div className="space-y-1">
+                              <div className="text-[10px] font-semibold text-gray-600 mb-1">📅 Journée (8h-17h)</div>
+                              {fullDayAssignments.map((assignment, idx) => (
+                                <div key={`full-${idx}`} className={`w-full p-1.5 rounded border ${POLE_COLORS[pole]} text-center`}>
+                                  <div className="font-medium text-xs">{assignment.agentNom}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Matin */}
+                          {morningAssignments.length > 0 ? (
+                            <div className="space-y-1">
+                              <div className="text-[10px] font-semibold text-gray-600">🌅 Matin (8h-12h)</div>
+                              {morningAssignments.map((assignment, idx) => (
+                                <div key={`morning-${idx}`} className={`w-full p-1 rounded border ${POLE_COLORS[pole]} text-center`}>
+                                  <div className="font-medium text-[11px]">{assignment.agentNom}</div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : fullDayAssignments.length === 0 && (
+                            <div className="text-gray-400 text-[10px] text-center py-1">Matin non assigné</div>
+                          )}
+                          
+                          {/* Après-midi */}
+                          {afternoonAssignments.length > 0 ? (
+                            <div className="space-y-1">
+                              <div className="text-[10px] font-semibold text-gray-600">☀️ Après-midi (13h-17h)</div>
+                              {afternoonAssignments.map((assignment, idx) => (
+                                <div key={`afternoon-${idx}`} className={`w-full p-1 rounded border ${POLE_COLORS[pole]} text-center`}>
+                                  <div className="font-medium text-[11px]">{assignment.agentNom}</div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : fullDayAssignments.length === 0 && (
+                            <div className="text-gray-400 text-[10px] text-center py-1">Après-midi non assigné</div>
+                          )}
+                        </>
                       )}
                     </motion.div>
                   );

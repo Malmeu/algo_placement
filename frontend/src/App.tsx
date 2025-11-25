@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, Calendar, Users, BarChart3, Plus, History, Eye, Briefcase, LogOut, Zap } from 'lucide-react';
+import { Upload, Calendar, Users, BarChart3, Plus, History, Eye, Briefcase, LogOut, Zap, Pin } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import LoginPage from './components/LoginPage';
 import CSVUploader from './components/CSVUploader';
@@ -10,6 +10,7 @@ import PlanningHistory from './components/PlanningHistory';
 import AgentView from './components/AgentView';
 import LeaveManagement from './components/LeaveManagement';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
+import FixedAssignmentsManager from './components/FixedAssignmentsManager';
 import NotificationBanner, { useNotifications } from './components/NotificationBanner';
 import { Agent, Planning, Leave } from './types';
 import { generatePlanning } from './services/placementAlgorithm';
@@ -22,7 +23,7 @@ function App() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [planning, setPlanning] = useState<Planning | null>(null);
   const [leaves, setLeaves] = useState<Leave[]>([]);
-  const [activeTab, setActiveTab] = useState<'upload' | 'agents' | 'planning' | 'history' | 'agentView' | 'leaves' | 'stats'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'agents' | 'planning' | 'history' | 'agentView' | 'leaves' | 'stats' | 'fixedAssignments'>('upload');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showAgentForm, setShowAgentForm] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | undefined>(undefined);
@@ -232,10 +233,10 @@ function App() {
         ? generatePlanningWithGeneticAlgorithm(agents, leaves)
         : await (async () => {
             await new Promise(resolve => setTimeout(resolve, 500));
-            return generatePlanning(agents);
+            return await generatePlanning(agents);
           })();
       
-      if (result.success) {
+      if (result.success && result.planning) {
         setPlanning(result.planning);
         setActiveTab('planning');
         
@@ -383,6 +384,12 @@ function App() {
             label="Analytics"
             disabled={!planning}
           />
+          <TabButton
+            active={activeTab === 'fixedAssignments'}
+            onClick={() => setActiveTab('fixedAssignments')}
+            icon={<Pin className="w-5 h-5" />}
+            label="Assignations fixes"
+          />
         </div>
       </div>
 
@@ -442,6 +449,10 @@ function App() {
           
           {activeTab === 'stats' && planning && (
             <AnalyticsDashboard planning={planning} agents={agents} />
+          )}
+
+          {activeTab === 'fixedAssignments' && (
+            <FixedAssignmentsManager agents={agents} />
           )}
         </div>
       </main>

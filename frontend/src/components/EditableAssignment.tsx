@@ -6,7 +6,7 @@ interface EditableAssignmentProps {
   assignment: Assignment | null;
   pole: Pole;
   day: DayOfWeek;
-  timeSlot: 'MATIN' | 'APRES_MIDI';
+  timeSlot: 'MATIN' | 'APRES_MIDI' | 'JOURNEE';
   agents: Agent[];
   onUpdate: (assignment: Assignment) => void;
   poleColor: string;
@@ -85,12 +85,24 @@ export default function EditableAssignment({
     );
   }
 
+  const getTimeSlotLabel = () => {
+    if (timeSlot === 'MATIN') return '🌅 Matin (8h-12h)';
+    if (timeSlot === 'APRES_MIDI') return '☀️ Après-midi (13h-17h)';
+    return '📅 Journée complète (8h-17h)';
+  };
+
+  const getEmptyLabel = () => {
+    if (timeSlot === 'MATIN') return 'Matin non assigné';
+    if (timeSlot === 'APRES_MIDI') return 'Après-midi non assigné';
+    return 'Journée non assignée';
+  };
+
   if (assignment) {
     return (
       <div className={`w-full p-1.5 rounded border ${poleColor} text-center group relative`}>
         <div className="font-medium text-xs">{assignment.agentNom}</div>
         <div className="text-[10px] mt-0.5 opacity-75">
-          {timeSlot === 'MATIN' ? '🌅 Matin (8h-12h)' : '☀️ Après-midi (13h-17h)'}
+          {getTimeSlotLabel()}
         </div>
         <button
           onClick={() => setIsEditing(true)}
@@ -108,7 +120,7 @@ export default function EditableAssignment({
       onClick={() => setIsEditing(true)}
       className="w-full text-gray-400 text-[10px] text-center py-1 hover:bg-gray-50 rounded transition-colors"
     >
-      {timeSlot === 'MATIN' ? 'Matin non assigné' : 'Après-midi non assigné'}
+      {getEmptyLabel()}
       <div className="text-blue-500 text-xs mt-1">+ Assigner</div>
     </button>
   );

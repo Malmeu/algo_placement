@@ -58,7 +58,10 @@ export default function AgentView({ agents, planning }: AgentViewProps) {
   }
 
   const agentAssignments = selectedAgent ? getAgentAssignments(selectedAgent.id) : [];
-  const totalHours = agentAssignments.length * 4; // 4h par créneau
+  // Calculer les heures : JOURNEE = 8h, MATIN/APRES_MIDI = 4h
+  const totalHours = agentAssignments.reduce((total, assignment) => {
+    return total + (assignment.timeSlot === 'JOURNEE' ? 8 : 4);
+  }, 0);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
@@ -134,6 +137,7 @@ export default function AgentView({ agents, planning }: AgentViewProps) {
                 <h4 className="font-semibold text-gray-900 mb-4">Planning de la semaine</h4>
                 {DAYS.map((day, index) => {
                   const dayAssignments = getAssignmentsForDay(selectedAgent.id, day);
+                  const fullDayAssignment = dayAssignments.find(a => a.timeSlot === 'JOURNEE');
                   const morningAssignment = dayAssignments.find(a => a.timeSlot === 'MATIN');
                   const afternoonAssignment = dayAssignments.find(a => a.timeSlot === 'APRES_MIDI');
 
@@ -146,37 +150,46 @@ export default function AgentView({ agents, planning }: AgentViewProps) {
                       className="border border-gray-200 rounded-lg p-4"
                     >
                       <div className="font-semibold text-gray-900 mb-3">{day}</div>
-                      <div className="grid grid-cols-2 gap-3">
-                        {/* Matin */}
-                        <div>
-                          {morningAssignment ? (
-                            <div className={`p-3 rounded-lg border ${POLE_COLORS[morningAssignment.pole]}`}>
-                              <div className="text-xs font-medium mb-1">🌅 Matin (8h-12h)</div>
-                              <div className="font-semibold">{morningAssignment.pole}</div>
-                            </div>
-                          ) : (
-                            <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 text-center">
-                              <div className="text-xs">Matin</div>
-                              <div className="text-sm">Libre</div>
-                            </div>
-                          )}
+                      
+                      {/* Affichage journée complète */}
+                      {fullDayAssignment ? (
+                        <div className={`p-4 rounded-lg border-2 ${POLE_COLORS[fullDayAssignment.pole]}`}>
+                          <div className="text-xs font-medium mb-1">📅 Journée complète (8h-17h)</div>
+                          <div className="font-semibold text-lg">{fullDayAssignment.pole}</div>
                         </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-3">
+                          {/* Matin */}
+                          <div>
+                            {morningAssignment ? (
+                              <div className={`p-3 rounded-lg border ${POLE_COLORS[morningAssignment.pole]}`}>
+                                <div className="text-xs font-medium mb-1">🌅 Matin (8h-12h)</div>
+                                <div className="font-semibold">{morningAssignment.pole}</div>
+                              </div>
+                            ) : (
+                              <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 text-center">
+                                <div className="text-xs">Matin</div>
+                                <div className="text-sm">Libre</div>
+                              </div>
+                            )}
+                          </div>
 
-                        {/* Après-midi */}
-                        <div>
-                          {afternoonAssignment ? (
-                            <div className={`p-3 rounded-lg border ${POLE_COLORS[afternoonAssignment.pole]}`}>
-                              <div className="text-xs font-medium mb-1">☀️ Après-midi (13h-17h)</div>
-                              <div className="font-semibold">{afternoonAssignment.pole}</div>
-                            </div>
-                          ) : (
-                            <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 text-center">
-                              <div className="text-xs">Après-midi</div>
-                              <div className="text-sm">Libre</div>
-                            </div>
-                          )}
+                          {/* Après-midi */}
+                          <div>
+                            {afternoonAssignment ? (
+                              <div className={`p-3 rounded-lg border ${POLE_COLORS[afternoonAssignment.pole]}`}>
+                                <div className="text-xs font-medium mb-1">☀️ Après-midi (13h-17h)</div>
+                                <div className="font-semibold">{afternoonAssignment.pole}</div>
+                              </div>
+                            ) : (
+                              <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 text-center">
+                                <div className="text-xs">Après-midi</div>
+                                <div className="text-sm">Libre</div>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </motion.div>
                   );
                 })}
@@ -189,6 +202,9 @@ export default function AgentView({ agents, planning }: AgentViewProps) {
                   <div className="space-y-2">
                     {Array.from(new Set(agentAssignments.map(a => a.pole))).map(pole => {
                       const poleAssignments = agentAssignments.filter(a => a.pole === pole);
+                      const poleHours = poleAssignments.reduce((total, a) => {
+                        return total + (a.timeSlot === 'JOURNEE' ? 8 : 4);
+                      }, 0);
                       return (
                         <div key={pole} className="flex items-center justify-between">
                           <span className={`px-3 py-1 rounded text-sm ${POLE_COLORS[pole]}`}>
@@ -196,7 +212,7 @@ export default function AgentView({ agents, planning }: AgentViewProps) {
                           </span>
                           <span className="text-sm text-gray-600">
                             {poleAssignments.length} affectation{poleAssignments.length > 1 ? 's' : ''} 
-                            ({poleAssignments.length * 4}h)
+                            ({poleHours}h)
                           </span>
                         </div>
                       );

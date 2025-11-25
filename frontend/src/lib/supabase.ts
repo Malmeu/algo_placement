@@ -23,3 +23,13 @@ export interface DbPlanning {
   stats?: any; // JSONB
   warnings?: string[];
 }
+
+export interface DbFixedAssignment {
+  id: string;
+  agent_id: string;
+  agent_nom: string;
+  pole: string;
+  jour: string;
+  created_at: string;
+  updated_at: string;
+}
